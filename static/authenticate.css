@@ -1,0 +1,62 @@
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+}
+
+h2 {
+    color: #5065ff;
+    font-size: 2rem;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    width: 30vw;
+    border-radius: 10px;
+    box-shadow: 0 0 5px rgba(11, 13, 26, 0.7);
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+  
+button {
+    padding: 6px;
+    border-radius: 10px;
+    background-color: #292b42;
+    color: white;
+    border: none;
+    width: 70%;
+    cursor: pointer;
+    font-size: 1em;
+    margin-bottom: 5vh;
+  }
+  
+  a {
+    text-decoration: none;
+    cursor: pointer;
+    color: #5065ff;
+  }
+
+  a:visited {
+    color: #5065ff;
+  }
+
+  #create {
+    padding: 8px;
+    border-radius: 10px;
+    background-color: #f46356;
+    color: white;
+    width: auto;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 5vh;
+  }

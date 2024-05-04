@@ -1,0 +1,163 @@
+.main-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.topics {
+    display: flex;
+    flex-direction: column;
+    width: 70%;
+    min-height: 800px;
+    height: auto;
+}
+
+
+#add {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 30px;
+    width: 150px;
+    margin: 4vh 0;
+    color: white;
+    background-color: #2f2f3f;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+#form-container-topic {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 5px;
+    z-index: 1000;
+    border-radius: 8px;
+    border: 1px solid #918e8e;
+    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.6);
+}
+
+form label {
+    display: block;
+    margin-bottom: 10px; 
+}
+
+button {
+    width: 150px;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+#topicName {
+    height: 100px;
+}
+
+.form-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-top: 2vh;
+}
+
+form input[type="text"] {
+    width: 70%; 
+    height: 5%;
+    margin-bottom: 10vh; 
+}
+
+.topic-container {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: white;
+    border-top: 1px solid #918e8e;
+    border-bottom: 1px solid #918e8e;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.topic-container:hover {
+    background-color: #f1f4f5;
+    border-radius: 8px;
+}
+
+#header {
+    padding: 10px 0;
+    font-size: 1.1rem;
+}
+
+.topic-info {
+    display: flex;
+}
+
+.info {
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.topic-container a {
+    font-weight: 600;
+}
+
+.first-cont {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.main-container h3 {
+    color: black;
+}
+
+
+.hello {
+    display: flex;
+    justify-content: space-between;
+    width: 100vw;
+    height: 100%;
+    padding-top: 15vh;
+    padding-bottom: 15vh;
+    background-color:  #FCF2E5;
+}
+
+.hello-text {
+    display: flex;
+    flex-direction: column;
+    margin-left: 15vw;
+    height: 100%;
+}
+
+.hello-img {
+    margin-right: 15vw;
+}
+
+.hello-img img {
+    height: 200px;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 70%;
+    font-size: 1.2rem;
+}
+
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 999;
+}
+
+#create-topic-form{
+    height: 30vh;
+}
+

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block head %}
+<title>Log In</title>
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='authenticate.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <h2>Register</h2>
+    <div class="form">
+        <div class="button-container">
+                <button type="submit">Register</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

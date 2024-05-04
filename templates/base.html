@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='base.css')}}">
+    {% block head %}{% endblock head %}
+</head>
+<body>
+     <div id="login-status" data-logged-in="{{ 'true' if context.logged_in else 'false' }}"></div>
+    <div class="header">
+        <div class="logo-container">
+            <img id="debate-logo" src="{{ url_for('static', filename='images/logo.png') }}">
+            <a id="logo" href="{{ url_for('home') }}">Deb8</a>
+        </div>
+        <div class="login-container">
+            {% if not context.logged_in %}
+                <a id="login">Log In</a>
+            {% else %}
+                <p>Welcome, {{ context.username }}!</p>
+                <a id="logout" href="{{ url_for('logout') }}">Logout</a>
+            {% endif %}
+        </div>
+    </div>
+    <div id="login-overlay">
+        <form id="login-form" action="/login" method="post">
+            <div class="closing-mark">
+                <img id="close" src="{{ url_for('static', filename='images/close.png') }}">
+            </div>
+            <h3>Log In</h3>
+            {% if error_message %}
+            <p style="color: red;">{{ error_message }}</p>
+            {% endif %}
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <div class="button-container">
+                <button type="button" id="login-btn">Login</button>
+                <p id="create">Create new account</p>
+            </div>
+            
+        </form>
+        <form id="register-form" style="display: none;" method="post" action="/register">
+            <div class="closing-mark">
+                <img id="close-register" src="{{ url_for('static', filename='images/close.png') }}">
+            </div>
+            <h2>Register</h2>
+            <label for="username">Username:</label>
+            <input type="text" id="username-register" name="username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password-register" name="password" required>
+            <div class="button-container">
+                <button type="submit">Register</button>
+            </div>
+            <div class="back-to-login">
+                <a id="back-to-login-link" href="#">Back to Login</a>
+            </div>
+        </form>
+    </div>
+    {% block content %}{% endblock content %}
+
+    <script>
+    document.getElementById('login').addEventListener('click', function() {
+    document.getElementById('login-overlay').style.display = 'block';
+    });
+
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+
+    document.getElementById('close-register').addEventListener('click', function(){
+    document.getElementById('login-overlay').style.display = 'none';
+    });
+
+
+    document.getElementById('create').addEventListener('click', function() {
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'flex';
+});
+
+    document.getElementById('close').addEventListener('click', function(){
+        document.getElementById('login-overlay').style.display = 'none';
+    })
+
+    document.getElementById('back-to-login-link').addEventListener('click', function(event) {
+    event.preventDefault(); // Prevent default link behavior
+
+    // Hide the register form
+    registerForm.style.display = 'none';
+
+    // Show the login form
+    loginForm.style.display = 'flex';
+});
+
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+        $('#login-btn').click(function () {
+            var formData = {
+                username: $('#username').val(),
+                password: $('#password').val()
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '/login',
+                data: formData,
+                success: function (response) {
+                    if (response.status === 200) {
+                        $('#login-overlay').hide();
+                        $('.login-container').html(`<p>Welcome, ${response.username}!   </p><a href="/logout">Logout</a>`);
+                    } else {
+                        // Display error message
+                        console.error('Invalid username or password. Please try again.');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        });
+    });
+
+    $(document).ready(function () {
+    $('#register-form').submit(function (event) {
+        event.preventDefault();
+
+        var formData = {
+            username: $('#username-register').val(),
+            password: $('#password-register').val()
+        };
+
+        console.log($('#username-register').val())
+
+        $.ajax({
+            type: 'POST',
+            url: '/register',
+            data: formData,
+            success: function (response) {
+                console.log(response);
+                if (response.status === 200) {
+                    $('#login-overlay').hide();
+                    $('.login-container').html(`<p>Welcome, ${response.username}    </p><a href="/logout">Logout</a>`);
+                    // Display error message
+                    console.error('Registration failed. Please try again.');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error(xhr.responseText);
+            }
+        });
+    });
+});
+
+
+
+
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS claim;
+CREATE TABLE IF NOT EXISTS claim (
+    claimID INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic INTEGER NOT NULL REFERENCES topic(topicID) ON DELETE CASCADE ON UPDATE CASCADE,
+    postingUser INTEGER REFERENCES user(userID) ON DELETE SET NULL ON UPDATE CASCADE,
+    creationTime INTEGER NOT NULL DEFAULT (strftime('%m/%d/%Y %H:%M', 'now')),
+    updateTime INTEGER NOT NULL DEFAULT (strftime('%m/%d/%Y %H:%M', 'now')),
+    claimHeader VARCHAR(100),
+    text TEXT NOT NULL
+);

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='topic.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="main-header">
+        <h3 id="topic-header">{{ context.topic_data.topicName }}</h3>
+        <p id="add" class="add" style="cursor: pointer;">Add a Claim</p>
+    </div>
+    <div class="claims">
+        {% for claim in context.claims %}
+        <div class="claim-container">
+            <a id="header" href="{{ url_for('view_claim', claim_id=claim.claimID) }}">{{claim.claimHeader}}</a>
+            <div class="first-cont">
+                <p class="info" id="time">{{claim.creationTime}}</p>
+                <p class="info-user">Created by @{{claim.postingUser}}</p>
+            </div>
+            <div class="claim-info">
+                <div class="text">
+                    <p>{{ claim.text }}</p>
+                </div>
+            </div>
+            {% if claim.relatedClaims %}
+            <div class="orange">
+                <p>{{ claim.claimType }} to:
+                    {% for related in claim.relatedClaims %}
+                        <a href="/claim/{{ related.claimID }}" class="related-claim-link">{{ related.claimHeader }}</a>
+                    {% endfor %}
+                </p>
+            </div>
+            
+        {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    <div id="overlay" style="display: none;">
+        <div id="form-container-claim" style="display: none;">
+            <form id="create-claim-form" action="{{ url_for('create_claim') }}" method="POST">
+                <div class="form-header">
+                    <h2>Create New Topic</h2>
+                </div>
+                <label for="claimHeader">Claim header:</label>
+                <input type="text" id="claimHeader" name="claimHeader" required>
+                <input type="hidden" name="topic_id" value="{{ context.topic_data.topicID }}">
+                <label for="text">Text:</label>
+                <textarea id="text" name="text" required></textarea>
+                <p style="color: gray; font-size: 14px;">Relate it to another claim (optional)</p>
+                <div class="related-claims-container" id="relatedClaimsContainer">
+                    {% for claim in context.claims %}
+                    <div class="related-claims">
+                        <input type="checkbox" id="claim{{ claim.claimID }}" name="relatedClaims[]" value="{{ claim.claimID }}">
+                        <label for="claim{{ claim.claimID }}">{{ claim.claimHeader }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <select id="relationshipType" name="relationshipType" style="display: none;">
+                    <option value="1">Opposed</option>
+                    <option value="2">Equivalent</option>
+                </select>
+                <button id="button1" type="submit">Submit</button>
+            </form>      
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("add").addEventListener("click", function() {
+        const isLoggedIn = document.getElementById("login-status").getAttribute("data-logged-in") === "true";
+        if (isLoggedIn) {
+            document.getElementById("form-container-claim").style.display = "block";
+            document.getElementById("overlay").style.display = "block"; 
+        } else {
+            document.getElementById('login-overlay').style.display = 'block'; 
+        }
+    });
+
+    document.getElementById("create-claim-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    var formData = new FormData(this);
+
+    fetch("{{ url_for('create_claim') }}", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success === true) {
+            document.getElementById("form-container-claim").style.display = "none";
+            document.getElementById("overlay").style.display = "none"; 
+            var newClaimContainer = document.createElement("div");
+            newClaimContainer.classList.add("claim-container");
+
+            var claimHeaderPara = document.createElement("a");
+            claimHeaderPara.textContent = data.claimHeader;
+            claimHeaderPara.id = 'header';
+            claimHeaderPara.href = "/claim/" + data.claimID;
+            newClaimContainer.appendChild(claimHeaderPara);
+
+            var firstContDiv = document.createElement("div");
+            firstContDiv.classList.add("first-cont");
+
+            const creationTime = document.createElement('p');
+            creationTime.textContent = `${data.creationTime}`;
+            creationTime.classList.add('info');
+            firstContDiv.appendChild(creationTime);
+
+            var postingUserPara = document.createElement("p");
+            postingUserPara.textContent = "Created by @" + data.postingUser;
+            postingUserPara.classList.add('info-user');
+            firstContDiv.appendChild(postingUserPara);
+
+            newClaimContainer.appendChild(firstContDiv);
+
+            var claimInfoDiv = document.createElement("div");
+            claimInfoDiv.classList.add("claim-info");
+
+            var textDiv = document.createElement("div");
+            textDiv.classList.add("text");
+
+            var claimTextPara = document.createElement("p");
+            claimTextPara.textContent = data.text;
+            textDiv.appendChild(claimTextPara);
+
+            claimInfoDiv.appendChild(textDiv);
+
+            newClaimContainer.appendChild(claimInfoDiv);
+
+            // Check if there are related claims and append them
+            if (data.relatedClaims && data.relatedClaims.length > 0) {
+                var relatedClaimsDiv = document.createElement("div");
+                relatedClaimsDiv.classList.add("orange");
+
+                var relatedClaimsPara = document.createElement("p");
+                relatedClaimsPara.textContent = `${data.claimType} to: `;
+
+                data.relatedClaims.forEach(related => {
+                var relatedClaimLink = document.createElement("a");
+                relatedClaimLink.textContent = related.claimHeader + " ";  // Set the link text to the claim header
+                relatedClaimLink.href = "/claim/" + related.claimID;  // Construct the URL dynamically using the claim ID
+                relatedClaimLink.classList.add("related-claim-link");  // Optional: add a class for styling
+                relatedClaimsPara.appendChild(relatedClaimLink);
+            });
+
+
+                relatedClaimsDiv.appendChild(relatedClaimsPara);
+                newClaimContainer.appendChild(relatedClaimsDiv);
+            }
+
+            var claimsContainer = document.querySelector(".claims");
+            var firstClaim = claimsContainer.firstChild;
+            claimsContainer.insertBefore(newClaimContainer, firstClaim);
+        } else {
+            console.error("Failed to create claim:", data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+    });
+});
+
+
+    document.addEventListener("click", function(event) {
+        if (event.target.id !== "add" && !document.getElementById("form-container-claim").contains(event.target)) {
+            document.getElementById("form-container-claim").style.display = "none";
+            document.getElementById("overlay").style.display = "none"; 
+        }
+    });
+
+
+    document.getElementById('relatedClaimsContainer').addEventListener('change', function() {
+        var relationshipType = document.getElementById('relationshipType');
+        if (this.querySelectorAll('input[type="checkbox"]:checked').length > 0) {
+            relationshipType.style.display = 'block';
+        } else {
+            relationshipType.style.display = 'none';
+        }
+    });
+});
+</script>
+
+    
+    
+
+
+
+    
+
+{% endblock %}
+
