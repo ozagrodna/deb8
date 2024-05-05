@@ -2,15 +2,6 @@ from flask import (Flask, render_template, request,
     redirect, session, jsonify, Response, url_for)
 import sqlite3, json
 from datetime import datetime, timedelta
-import os
-
-# Path to your SQLite database file
-db_file_path = 'myproject/database.db'
-
-if os.path.exists(db_file_path):
-    print("SQLite database file exists.")
-else:
-    print("SQLite database file does not exist.")
 
 
 app = Flask(__name__)

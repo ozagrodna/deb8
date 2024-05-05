@@ -40,14 +40,18 @@
         <div id="form-container-claim" style="display: none;">
             <form id="create-claim-form" action="{{ url_for('create_claim') }}" method="POST">
                 <div class="form-header">
-                    <h2>Create New Topic</h2>
+                    <h2>Create New Claim</h2>
                 </div>
                 <label for="claimHeader">Claim header:</label>
                 <input type="text" id="claimHeader" name="claimHeader" required>
                 <input type="hidden" name="topic_id" value="{{ context.topic_data.topicID }}">
                 <label for="text">Text:</label>
                 <textarea id="text" name="text" required></textarea>
-                <p style="color: gray; font-size: 14px;">Relate it to another claim (optional)</p>
+                {% if claims %}
+                    <p style="color: gray; font-size: 14px;">Relate it to another claim (optional)</p>
+                {% else %}
+                 <p style="color: gray; font-size: 14px; margin-top: 10vh;">This is the first claim in this topic. <br> You cannot relate it to another claim.</p>
+                 {% endif %}
                 <div class="related-claims-container" id="relatedClaimsContainer">
                     {% for claim in context.claims %}
                     <div class="related-claims">
