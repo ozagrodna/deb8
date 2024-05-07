@@ -10,7 +10,7 @@
      <div id="login-status" data-logged-in="{{ 'true' if context.logged_in else 'false' }}"></div>
     <div class="header">
         <div class="logo-container">
-            <img id="debate-logo" src="{{ url_for('static', filename='images/logo.png') }}">
+            <img id="debate-logo" src="{{ url_for('static', filename='images/logo.png') }}" alt="Deb8 logo">
             <a id="logo" href="{{ url_for('home') }}">Deb8</a>
         </div>
         <div class="login-container">
@@ -28,28 +28,30 @@
                 <img id="close" src="{{ url_for('static', filename='images/close.png') }}">
             </div>
             <h3>Log In</h3>
-            {% if error_message %}
-            <p style="color: red;">{{ error_message }}</p>
-            {% endif %}
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required>
             <label for="password">Password:</label>
             <input type="password" id="password" name="password" required>
+            <div class="error">
+                <span id="login-error" style="color: red;"></span>
+            </div>
             <div class="button-container">
                 <button type="button" id="login-btn">Login</button>
                 <p id="create">Create new account</p>
             </div>
-            
         </form>
         <form id="register-form" style="display: none;" method="post" action="/register">
             <div class="closing-mark">
                 <img id="close-register" src="{{ url_for('static', filename='images/close.png') }}">
             </div>
-            <h2>Register</h2>
+            <h3>Register</h3>
             <label for="username">Username:</label>
             <input type="text" id="username-register" name="username" required>
             <label for="password">Password:</label>
             <input type="password" id="password-register" name="password" required>
+            <div class="error">
+                <span id="register-error" style="color: red;"></span>
+            </div>
             <div class="button-container">
                 <button type="submit">Register</button>
             </div>
@@ -60,103 +62,89 @@
     </div>
     {% block content %}{% endblock content %}
 
-    <script>
-    document.getElementById('login').addEventListener('click', function() {
-    document.getElementById('login-overlay').style.display = 'block';
-    });
-
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-
-    document.getElementById('close-register').addEventListener('click', function(){
-    document.getElementById('login-overlay').style.display = 'none';
-    });
-
-
-    document.getElementById('create').addEventListener('click', function() {
-    loginForm.style.display = 'none';
-    registerForm.style.display = 'flex';
-});
-
-    document.getElementById('close').addEventListener('click', function(){
-        document.getElementById('login-overlay').style.display = 'none';
-    })
-
-    document.getElementById('back-to-login-link').addEventListener('click', function(event) {
-    event.preventDefault(); // Prevent default link behavior
-
-    // Hide the register form
-    registerForm.style.display = 'none';
-
-    // Show the login form
-    loginForm.style.display = 'flex';
-});
-
-    </script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function () {
-        $('#login-btn').click(function () {
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#login').click(function() {
+            $('#login-overlay').css('display', 'block');
+        });
+        $('#close-register').click(function() {
+            $('#login-overlay').css('display', 'none');
+        });
+        $('#create').click(function() {
+            $('#login-form').css('display', 'none');
+            $('#register-form').css('display', 'flex');
+        });
+        $('#close').click(function() {
+            $('#login-overlay').css('display', 'none');
+        });
+        $('#back-to-login-link').click(function(event) {
+            event.preventDefault();
+            $('#register-form').css('display', 'none');
+            $('#login-form').css('display', 'flex');
+        });
+        $('#login-btn').click(function() {
             var formData = {
                 username: $('#username').val(),
                 password: $('#password').val()
             };
 
-            $.ajax({
-                type: 'POST',
-                url: '/login',
-                data: formData,
-                success: function (response) {
-                    if (response.status === 200) {
-                        $('#login-overlay').hide();
-                        $('.login-container').html(`<p>Welcome, ${response.username}!&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p><a href="/logout">Logout</a>`);
-                    } else {
-                        // Display error message
-                        console.error('Invalid username or password. Please try again.');
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.error(xhr.responseText);
+        $.ajax({
+            type: 'POST',
+            url: '/login',
+            data: formData,
+            success: function(response) {
+                if (response.status === 200) {
+                    $('#login-overlay').hide();
+                    $('.login-container').html(`<p>Welcome, ${response.username}!&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p><a href="/logout">Logout</a>`);
+                    $('#login-status').attr('data-logged-in', 'true');
+                } else {
+                    $('#login-error').text(response.message);
                 }
-            });
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                var response = JSON.parse(xhr.responseText);
+                $('#login-error').text(response.message);
+            }
         });
     });
 
-    $(document).ready(function () {
-    $('#register-form').submit(function (event) {
-        event.preventDefault();
+        $('#register-form').submit(function(event) {
+        event.preventDefault();  // Prevent the default form submission.
 
         var formData = {
             username: $('#username-register').val(),
             password: $('#password-register').val()
         };
 
-        console.log($('#username-register').val())
-
         $.ajax({
             type: 'POST',
             url: '/register',
             data: formData,
-            success: function (response) {
+            success: function(response) {
                 console.log(response);
                 if (response.status === 200) {
                     $('#login-overlay').hide();
                     $('.login-container').html(`<p>Welcome, ${response.username}&nbsp;</p><a href="/logout">Logout</a>`);
-                    // Display error message
-                    console.error('Registration failed. Please try again.');
+                    $('#login-status').attr('data-logged-in', 'true');
+                    $('#topic-add-section').show(); 
+
+                } else {
+                    $('#register-error').text(response.message);
                 }
             },
-            error: function (xhr, status, error) {
-                console.error(xhr.responseText);
+            error: function(xhr, status, error) {
+                console.error("Registration error:", xhr.responseText);
+                var response = JSON.parse(xhr.responseText);
+                $('#register-error').text(response.message);
             }
         });
     });
+
 });
 
-
-
-
-    </script>
+</script>
 </body>
 </html>
 

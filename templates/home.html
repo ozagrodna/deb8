@@ -16,7 +16,7 @@
             <strong>Explore, express, and evolve your ideas at Deb8.</strong></p>
         </div>
         <div class="hello-img">
-            <img src="{{ url_for('static', filename='images/debate.png') }}">
+            <img src="{{ url_for('static', filename='images/debate.png') }}" alt="debate banner">
         </div>
     </div>
     <div class="main-header">
@@ -39,6 +39,9 @@
     </div>
     <div id="overlay" style="display: none;">
         <div id="form-container-topic" style="display: none;">
+            <div class="closing-mark">
+                <img id="close-topic" src="{{ url_for('static', filename='images/close.png') }}" alt="close icon">
+            </div>
             <div class="form-header">
                 <h2>Create New Topic</h2>
             </div>
@@ -62,12 +65,9 @@
                 document.getElementById('login-overlay').style.display = 'block';
             }
         });
-        
-        document.addEventListener("click", function(event) {
-            if (event.target.id !== "add" && !document.getElementById("form-container-topic").contains(event.target)) {
-                document.getElementById("form-container-topic").style.display = "none";
-                document.getElementById("overlay").style.display = "none";
-            }
+        document.getElementById('close-topic').addEventListener('click', function() {
+            document.getElementById('form-container-topic').style.display = 'none';
+            document.getElementById("overlay").style.display = "none";
         });
     
         document.getElementById("create-topic-form").addEventListener("submit", function(event) {
@@ -75,8 +75,6 @@
     
     
         var formData = new FormData(this);
-        
-    
         fetch("{{ url_for('create_topic') }}", {
             method: "POST",
             body: formData
@@ -109,8 +107,6 @@
                 var topicsContainer = document.querySelector(".topics");
                 var firstTopic = topicsContainer.firstChild;
                 topicsContainer.insertBefore(newTopicContainer, firstTopic);
-    
-    
             } else {
                 console.error("Failed to create topic");
             }
@@ -119,6 +115,6 @@
             console.error("Error:", error);
         });
     });
-    });
-    </script>
+});
+</script>
 {% endblock %}

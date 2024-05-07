@@ -15,7 +15,7 @@
         <div class="claim-container">
             <a id="header" href="{{ url_for('view_claim', claim_id=claim.claimID) }}">{{claim.claimHeader}}</a>
             <div class="first-cont">
-                <p class="info" id="time">{{claim.creationTime}}</p>
+                <p class="info" id="time">Last time updated: {{claim.updateTime}}</p>
                 <p class="info-user">Created by @{{claim.postingUser}}</p>
             </div>
             <div class="claim-info">
@@ -27,11 +27,10 @@
             <div class="orange">
                 <p>{{ claim.claimType }} to:
                     {% for related in claim.relatedClaims %}
-                        <a href="/claim/{{ related.claimID }}" class="related-claim-link">{{ related.claimHeader }}</a>
+                        <a href="/claim/{{ related.claimID }}" class="related-claim-link" style="text-decoration: underline;">{{ related.claimHeader }}</a>
                     {% endfor %}
                 </p>
             </div>
-            
         {% endif %}
         </div>
         {% endfor %}
@@ -39,6 +38,9 @@
     <div id="overlay" style="display: none;">
         <div id="form-container-claim" style="display: none;">
             <form id="create-claim-form" action="{{ url_for('create_claim') }}" method="POST">
+                <div class="closing-mark">
+                    <img id="close-claim" src="{{ url_for('static', filename='images/close.png') }}">
+                </div>
                 <div class="form-header">
                     <h2>Create New Claim</h2>
                 </div>
@@ -46,12 +48,12 @@
                 <input type="text" id="claimHeader" name="claimHeader" required>
                 <input type="hidden" name="topic_id" value="{{ context.topic_data.topicID }}">
                 <label for="text">Text:</label>
-                <textarea id="text" name="text" required></textarea>
-                {% if claims %}
+                    <textarea id="text" name="text" required></textarea>
+                {% if context.claims %}
                     <p style="color: gray; font-size: 14px;">Relate it to another claim (optional)</p>
                 {% else %}
-                 <p style="color: gray; font-size: 14px; margin-top: 10vh;">This is the first claim in this topic. <br> You cannot relate it to another claim.</p>
-                 {% endif %}
+                    <p style="color: gray; font-size: 14px;">No claims to relate to yet in this topic.<br>Come back soon.</p>
+                {% endif %}            
                 <div class="related-claims-container" id="relatedClaimsContainer">
                     {% for claim in context.claims %}
                     <div class="related-claims">
@@ -107,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function() {
             firstContDiv.classList.add("first-cont");
 
             const creationTime = document.createElement('p');
-            creationTime.textContent = `${data.creationTime}`;
+            creationTime.textContent = "Last time updated: " + `${data.creationTime}`;
             creationTime.classList.add('info');
             firstContDiv.appendChild(creationTime);
 
@@ -132,7 +134,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
             newClaimContainer.appendChild(claimInfoDiv);
 
-            // Check if there are related claims and append them
             if (data.relatedClaims && data.relatedClaims.length > 0) {
                 var relatedClaimsDiv = document.createElement("div");
                 relatedClaimsDiv.classList.add("orange");
@@ -142,9 +143,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 data.relatedClaims.forEach(related => {
                 var relatedClaimLink = document.createElement("a");
-                relatedClaimLink.textContent = related.claimHeader + " ";  // Set the link text to the claim header
-                relatedClaimLink.href = "/claim/" + related.claimID;  // Construct the URL dynamically using the claim ID
-                relatedClaimLink.classList.add("related-claim-link");  // Optional: add a class for styling
+                relatedClaimLink.textContent = related.claimHeader + " ";  
+                relatedClaimLink.href = "/claim/" + related.claimID;  
+                relatedClaimLink.classList.add("related-claim-link"); 
                 relatedClaimsPara.appendChild(relatedClaimLink);
             });
 
@@ -166,11 +167,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-    document.addEventListener("click", function(event) {
-        if (event.target.id !== "add" && !document.getElementById("form-container-claim").contains(event.target)) {
-            document.getElementById("form-container-claim").style.display = "none";
-            document.getElementById("overlay").style.display = "none"; 
-        }
+    document.getElementById('close-claim').addEventListener('click', function() {
+        document.getElementById('form-container-claim').style.display = 'none';
+        document.getElementById("overlay").style.display = "none"; 
     });
 
 
@@ -193,4 +192,3 @@ document.addEventListener("DOMContentLoaded", function() {
     
 
 {% endblock %}
-

@@ -17,117 +17,74 @@ def home():
         'logged_in': session.get('logged_in', False),
         'username': session.get('username', None)
     }
-    conn = sqlite3.connect('debate.sqlite')  # Replace 'your_database.db' with your actual database file name
-    conn.row_factory = sqlite3.Row  # This allows accessing columns by name
+    conn = sqlite3.connect('debate.sqlite') 
+    conn.row_factory = sqlite3.Row
     
-    # Retrieve all Topic objects
     cursor = conn.execute('SELECT * FROM topic ORDER BY creationTime DESC')
     topics = [dict(row) for row in cursor.fetchall()]
     
-    # Close the database connection
     conn.close()
 
-    
     context['topics'] = topics
-    # Debugging: Print out topics
+
     print("Topics retrieved from database:", topics)
 
 
     return render_template('home.html', context=context)
 
-
-
-
-#CHECK HOW MANY USERS IN DATABASE 
-def get_all_users():
-    connection = sqlite3.connect('debate.sqlite')
-    cursor = connection.cursor()
-
-    cursor.execute('SELECT * FROM user')
-    
-    all_users = cursor.fetchall()
-
-    connection.close()
-
-    return all_users
-
-@app.route('/users')
-def users():
-    all_users = get_all_users()
-    return 'Number of users: {}'.format(len(all_users))
-
-#REGISTER USER
-def register_user(username, password):
+def check_username(username):
     try:
+        connection = sqlite3.connect('debate.sqlite')
+        cursor = connection.cursor()
+        cursor.execute('SELECT * FROM user WHERE userName = ?', (username,))
+        user = cursor.fetchone()
+        return user is not None
+    finally:
+        connection.close()
+
+
+def register_user(username, password):
+    connection = None  
+    try:
+        if check_username(username):
+            return False  
+
         connection = sqlite3.connect('debate.sqlite')
         cursor = connection.cursor()
         cursor.execute('INSERT INTO user (userName, passwordHash) VALUES (?, ?)', (username, password))
         connection.commit()
-        print(username)
+        return True  
     except sqlite3.IntegrityError as e:
         print(f"Error inserting user '{username}': {e}")
+        return False  
     finally:
-        connection.close()
-    print('okay')
+        if connection:
+            connection.close()  
 
-@app.route('/register', methods=['GET', 'POST'])
+
+
+@app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
-        # Extract username and password from the form data
         username = request.form['username']
         password = request.form['password']
 
-        register_user(username, password)
-        session['username'] = username
-        session['logged_in'] = True
-        response_data = {
-                'status': 200,
-                'username': username
-            }
-        
-        return jsonify(response_data), 200
+        if 'username' in session:
+            return jsonify({'status': 200, 'message': 'User already logged in'}), 200
+
+        if register_user(username, password):
+            session['username'] = username
+            session['logged_in'] = True
+            return jsonify({'status': 200, 'username': username}), 200
+        else:
+            return jsonify({'status': 400, 'message': 'Username already exists'}), 400
     else:
         return render_template('register.html')
 
-#USER LOGIN
-    
-def validate_login(username, password):
-    connection = sqlite3.connect('debate.sqlite')
-    cursor = connection.cursor()
-    
-    # Retrieve user record from database based on username
-    cursor.execute('SELECT * FROM user')
-    user = cursor.fetchone()
-    print(user)
-    
-    if user:
-        # Check if the entered password matches the stored hashed password
-        if user[2] == password:  # Assuming password is stored in the third column
-            return True
-    return False
-
-@app.route('/login', methods=['POST'])
-def login():
-    username = request.form['username']
-    password = request.form['password']
-
-    if validate_login(username, password):
-        session.permanent = True  # Make the session permanent so it does not end after browser close
-        session['username'] = username
-        session['logged_in'] = True
-        
-        response_data = {
-            'status': 200,
-            'username': username
-        }
-        return jsonify(response_data), 200
-    else:
-        return Response('Invalid username or password', status=400)
 
 
 @app.route('/logout')
 def logout():
-    # Clear all data stored in the session
     session.clear()
     return redirect(url_for('home'))
 
@@ -143,6 +100,34 @@ def profile():
         return redirect('/login')
     
 
+def validate_login(username, password):
+    connection = sqlite3.connect('debate.sqlite')
+    cursor = connection.cursor()
+    cursor.execute('SELECT * FROM user WHERE username = ?', (username,))
+    user = cursor.fetchone()
+    connection.close()
+
+    if user and user[2] == password:
+        return True
+    return False
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
+
+    if 'username' in session:
+        return jsonify({'status': 200, 'message': 'User already logged in'}), 200
+
+    if validate_login(username, password):
+        session.permanent = True
+        session['username'] = username
+        session['logged_in'] = True
+        return jsonify({'status': 200, 'username': username}), 200
+    else:
+        return jsonify({'status': 400, 'message': 'Invalid username or password'}), 400
+
 #CREATE TOPIC
 @app.route('/create_topic', methods=['POST'])
 def create_topic():
@@ -153,17 +138,14 @@ def create_topic():
     try:
         connection = sqlite3.connect('debate.sqlite')
         cursor = connection.cursor()
-
         cursor.execute('''
             INSERT INTO topic (topicName, postingUser, creationTime) VALUES (?, ?, ?);
         ''', (topic_name, posting_user, creation_time))
-
         topic_id = cursor.lastrowid
-
         connection.commit()
         connection.close()
 
-        return jsonify({"success": True, "message": "Topic created successfully", "topicName": topic_name, "postingUser": posting_user, "creationTime": creation_time, "topicID": topic_id})
+        return jsonify({"success": True, "message": "Topic has been created successfully", "topicName": topic_name, "postingUser": posting_user, "creationTime": creation_time, "topicID": topic_id})
     except Exception as e:
         return f"An error occurred while creating the topic: {e}"
 
@@ -173,15 +155,11 @@ def topic(topicId):
     try:
         with sqlite3.connect('debate.sqlite') as connection:
             cursor = connection.cursor()
-            
-            # Fetch topic details
-            cursor.execute('SELECT * FROM topic WHERE topicID = ? ORDER BY creationTime DESC' , (topicId,))
+            cursor.execute('SELECT * FROM topic WHERE topicID = ?', (topicId,))
             topic = cursor.fetchone()
             if topic is None:
                 return "Topic not found", 404
-
             
-            # Define the context with basic topic info
             topic_data = {'topicID': topic[0], 'topicName': topic[1]}
             context = {
                 'topic_data': topic_data,
@@ -189,20 +167,21 @@ def topic(topicId):
                 'username': session.get('username', None)
             }
         
-            
-            # Fetch claims and their types
             cursor.execute('''
-                SELECT c.claimID, c.topic, c.postingUser, c.creationTime, c.updateTime, c.claimHeader, c.text, ct.claimRelType
+                SELECT c.claimID, c.topic, c.postingUser, c.creationTime, COALESCE(MAX(r.creationTime), c.creationTime) AS updateTime, c.claimHeader, c.text, ct.claimRelType
                 FROM claim c
-                LEFT JOIN claimToClaim cc ON (c.claimID = cc.first OR c.claimID = cc.second)
-                LEFT JOIN claimToClaimType ct ON cc.claimRelType = ct.claimRelTypeID
-                WHERE c.topic = ? ORDER BY c.creationTime DESC
+                LEFT JOIN replyToClaim rc ON c.claimID = rc.claim
+                LEFT JOIN replyText r ON rc.reply = r.replyTextID
+                LEFT JOIN claimToClaimType ct ON ct.claimRelTypeID = (SELECT claimRelType FROM claimToClaim WHERE first = c.claimID OR second = c.claimID LIMIT 1)
+                WHERE c.topic = ?
+                GROUP BY c.claimID, c.topic, c.postingUser, c.creationTime, c.claimHeader, c.text, ct.claimRelType
+                ORDER BY updateTime DESC
             ''', (topicId,))
+
             claims = cursor.fetchall()
 
             claim_data_list = []
             for claim in claims:
-                # Fetch related claims
                 cursor.execute('''
                     SELECT cc.second, cc.claimRelType, c.claimHeader
                     FROM claimToClaim cc
@@ -238,7 +217,7 @@ def topic(topicId):
         return f"An error occurred while fetching topic: {e}"
 
 
-# Function to fetch claim header from database based on claim ID
+
 def get_claim_header(claim_id):
     with sqlite3.connect('debate.sqlite') as connection:
         cursor = connection.cursor()
@@ -247,7 +226,6 @@ def get_claim_header(claim_id):
         return result[0] if result else 'Unknown'
 
 
-# Function to fetch claim header from database based on claim ID
 def get_claim_header(claim_id):
     with sqlite3.connect('debate.sqlite') as connection:
         cursor = connection.cursor()
@@ -262,30 +240,25 @@ def get_claim_header(claim_id):
 def create_claim():
     if request.method == 'POST':
         try:
-            # Retrieve form data
             topic_id = request.form.get('topic_id')
             text = request.form.get('text')
             claim_header = request.form.get('claimHeader')
-            relationship_type = request.form.get('relationshipType')  # This should be the ID from the form
+            relationship_type = request.form.get('relationshipType') 
             related_claims = request.form.getlist('relatedClaims[]')
+            posting_user = session.get('username')
+            creation_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
 
-            # Validate required fields
             if not topic_id or not text:
                 return jsonify({"success": False, "message": "Topic ID and text are required"}), 400
-            
-            posting_user = session.get('username')
-            creation_time = datetime.now().strftime("%d/%m/%Y, %H:%M")
-            
-            # Insert new claim into the database
+
             with sqlite3.connect('debate.sqlite') as connection:
                 cursor = connection.cursor()
                 cursor.execute('''
-                    INSERT INTO claim (topic, postingUser, text, creationTime, claimHeader) 
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (topic_id, posting_user, text, creation_time, claim_header))
+                    INSERT INTO claim (topic, postingUser, text, creationTime, updateTime, claimHeader) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (topic_id, posting_user, text, creation_time, creation_time, claim_header))
                 new_claim_id = cursor.lastrowid
 
-                # Handle related claims
                 for related_claim_id in related_claims:
                     cursor.execute('''
                         INSERT INTO claimToClaim (first, second, claimRelType) 
@@ -294,7 +267,6 @@ def create_claim():
 
                 connection.commit()
 
-            # Build a list of related claims data after insertion
             related_claims_data = []
             for related_claim_id in related_claims:
                 cursor.execute('''
@@ -306,29 +278,27 @@ def create_claim():
                 related = cursor.fetchone()
                 if related:
                     claim_header, relationship_type_id = related
-                    # Map the relationship type ID and store the result
                     mapped_type = map_claim_type(str(relationship_type_id))
                     related_claims_data.append({
                         'claimID': related_claim_id,
                         'claimHeader': claim_header,
-                        'claimType': mapped_type  # Use mapped descriptive name
+                        'claimType': mapped_type  
                     })
 
-            # Make sure to use the originally fetched `relationship_type` for response
             return jsonify({
                 "success": True,
                 "claimID": new_claim_id,
                 "claimHeader": claim_header,
                 "creationTime": creation_time,
+                "updateTime": creation_time,
                 "postingUser": posting_user,
                 "text": text,
-                "claimType": map_claim_type(relationship_type),  # Make sure this is the ID, not the name
+                "claimType": map_claim_type(relationship_type), 
                 "relatedClaims": related_claims_data
             })
 
         except Exception as e:
             return jsonify({"success": False, "message": f"An error occurred while creating the claim: {e}"}), 500
-
 
 
 def map_reply_to_reply_type(reply_type_id):
@@ -337,11 +307,8 @@ def map_reply_to_reply_type(reply_type_id):
         '2': "Support",
         '3': "Rebuttal"
     }
-    # Ensure the reply_type_id is a string for the dictionary lookup
     reply_type_str = str(reply_type_id)
     return reply_to_reply_types.get(reply_type_str, "Unknown Type")
-
-
 
 
 def map_reply_type(reply_type):
@@ -350,16 +317,15 @@ def map_reply_type(reply_type):
         '2': "Supporting Argument",
         '3': "Counterargument"
     }
-    return types.get(reply_type, "Unknown Type")  # Providing a default for undefined types
+    return types.get(reply_type, "Unknown Type")  
 
 def map_claim_type(claim_type_id):
-    print("Received claim_type_id:", claim_type_id)  # Add this to check what's being passed
+    print("Received claim_type_id:", claim_type_id)  
     claim_types = {
         '1': "Opposed",
         '2': "Equivalent"
     }
-    return claim_types.get(str(claim_type_id), "Unknown Type")  # Ensure string conversion
-
+    return claim_types.get(str(claim_type_id), "Unknown Type")  
 
 
 @app.route('/create_reply_to_claim/<int:claim_id>', methods=['POST'])
@@ -367,7 +333,8 @@ def create_reply_to_claim(claim_id):
     reply_text = request.form.get('replyText')
     reply_type = request.form.get('replyType')
     posting_user = session.get('username')
-    creation_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+    creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if not reply_type or not reply_text:
         return jsonify({"success": False, "message": "Reply Text and Reply-to-Claim Relationship Type are required"}), 400
@@ -378,16 +345,17 @@ def create_reply_to_claim(claim_id):
             cursor.execute('INSERT INTO replyText (postingUser, creationTime, text) VALUES (?, ?, ?)', (posting_user, creation_time, reply_text))
             reply_text_id = cursor.lastrowid
             cursor.execute('INSERT INTO replyToClaim (reply, claim, replyToClaimRelType) VALUES (?, ?, ?)', (reply_text_id, claim_id, reply_type))
+            cursor.execute('UPDATE claim SET updateTime = ? WHERE claimID = ?', (update_time, claim_id))
             connection.commit()
 
-            # Use the map_reply_type function to convert the reply_type to a string
             mapped_reply_type = map_reply_type(reply_type)
-
+            
             return jsonify({
                 "success": True,
                 "message": "Reply created successfully",
+                 "replyID": reply_text_id,
                 "replyText": reply_text,
-                "replyType": mapped_reply_type,  # Send the string representation
+                "replyType": mapped_reply_type, 
                 "postingUser": posting_user,
                 "creationTime": creation_time
             })
@@ -396,15 +364,11 @@ def create_reply_to_claim(claim_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-
-
-
 @app.route('/claim/<int:claim_id>')
 def view_claim(claim_id):
     try:
         with sqlite3.connect('debate.sqlite') as connection:
             cursor = connection.cursor()
-
             cursor.execute("""
                 SELECT c.*, t.claimRelType
                 FROM claim AS c
@@ -416,7 +380,7 @@ def view_claim(claim_id):
             
             if claim_data is None:
                 return "Claim not found", 404
-            
+
             claim = {
                 'claimID': claim_data[0],
                 'topic': claim_data[1],
@@ -435,32 +399,31 @@ def view_claim(claim_id):
                 FROM replyToClaim AS r
                 JOIN replyText AS t ON r.reply = t.replyTextID
                 WHERE r.claim = ?
-                ORDER BY t.creationTime DESC
+                ORDER BY t.creationTime ASC
             """, (claim_id,))
             replies = cursor.fetchall()
 
             replies_data = []
             for reply in replies:
                 cursor.execute("""
-                    SELECT rr.replyToReplyID, rr.parent, rr.replyToReplyRelType, rt.text, rt.postingUser, rt.creationTime
-                    FROM replyToReply AS rr
-                    JOIN replyText AS rt ON rr.reply = rt.replyTextID
-                    WHERE rr.parent = ?
-                    ORDER BY rt.creationTime DESC
-                """, (reply[0],))
+                SELECT rr.replyToReplyID, rr.parent, rr.replyToReplyRelType, rt.text, rt.postingUser, rt.creationTime
+                FROM replyToReply AS rr
+                JOIN replyText AS rt ON rr.reply = rt.replyTextID
+                WHERE rr.parent = ?
+                ORDER BY rt.creationTime DESC
+            """, (reply[0],))
                 sub_replies = cursor.fetchall()
 
-                sub_replies_data = [
-                    {
-                    'replyToReplyID': sub_reply[0],
-                    'parent': sub_reply[1],
-                    'replyText': sub_reply[3],
-                    'postingUser': sub_reply[4],
-                    'creationTime': sub_reply[5],
-                    'replyToReplyRelType': map_reply_to_reply_type(sub_reply[2])
-                    }
-                for sub_reply in sub_replies
-                ]
+                sub_replies_data = []
+                for sub_reply in sub_replies:
+                    sub_replies_data.append({
+                        'replyToReplyID': sub_reply[0],
+                        'parent': sub_reply[1],
+                        'replyText': sub_reply[3],
+                        'postingUser': sub_reply[4],
+                        'creationTime': sub_reply[5],
+                        'replyToReplyRelType': map_reply_to_reply_type(sub_reply[2])
+                    })
 
                 replies_data.append({
                     'replyToClaimID': reply[0],
@@ -470,10 +433,10 @@ def view_claim(claim_id):
                     'replyText': reply[4],
                     'postingUser': reply[5],
                     'creationTime': reply[6],
-                    'numReplies': reply[7],  
+                    'numReplies': reply[7],
                     'subReplies': sub_replies_data,
                 })
-
+    
             context = {
                 'claim': claim,
                 'claimType': claim_type,
@@ -486,16 +449,13 @@ def view_claim(claim_id):
         return f"An error occurred: {e}"
 
 
-
-
-
 @app.route('/create_reply_to_reply/<int:parent_reply_id>', methods=['POST'])
 def create_reply_to_reply(parent_reply_id):
     try:
         reply_text = request.form['replyText']
         reply_type_id = request.form['replyToReplyType']
         posting_user = session.get('username')
-        creation_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+        creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:")
 
         if not reply_type_id or not reply_text:
             return jsonify({"success": False, "message": "Reply Text and Reply Type are required"}), 400
@@ -511,8 +471,6 @@ def create_reply_to_reply(parent_reply_id):
             cursor.execute('INSERT INTO replyToReply (reply, parent, replyToReplyRelType) VALUES (?, ?, ?)', 
                            (reply_text_id, parent_reply_id, reply_type_id))
             connection.commit()
-
-            # Fetch the newly created reply
             cursor.execute("""
             SELECT rr.replyToReplyID, rr.parent, rr.replyToReplyRelType, rt.text, rt.postingUser, rt.creationTime
             FROM replyToReply AS rr
@@ -540,12 +498,3 @@ def create_reply_to_reply(parent_reply_id):
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
-
-
-
-
-
-
-
-

@@ -27,7 +27,7 @@
                 <div class="one-reply">
                     <div class="reply-body" data-reply-id="{{ reply.replyToClaimID }}">
                         <div class="r-header">
-                            <p class="reply-info-user">{{ reply.postingUser }}</p>
+                            <p class="reply-info-user">@{{ reply.postingUser }}</p>
                             <p class="reply-info-time">{{ reply.creationTime }}</p>
                             <p class="reply-type-info" id="selectedReplyType">{{ reply.replyToClaimRelType }}</p>
                         </div>
@@ -43,7 +43,7 @@
                         {% for subReply in reply.subReplies %}
                             <div class="nested-container">
                                 <div class="r-header">
-                                    <p class="reply-info-user">{{ subReply.postingUser }}</p>
+                                    <p class="reply-info-user">@{{ subReply.postingUser }}</p>
                                     <p class="reply-info-time">{{ subReply.creationTime }}</p>
                                     <p class="reply-type-info">{{ subReply.replyToReplyRelType }}</p>
                                 </div>
@@ -59,26 +59,32 @@
         </div>
     </div>
 </div>
-
-<div id="form-container-reply" style="display: none;">
-    <div class="form-header">
-        <h4>{{context.claim.claimHeader}}</h4>
+<div id="overlay">
+    <div id="form-container-reply" style="display: none;">
+        <div class="closing-mark">
+            <img id="close-reply" src="{{ url_for('static', filename='images/close.png') }}" alt="close icon">
+        </div>
+        <div class="form-header">
+            <h4>{{context.claim.claimHeader}}</h4>
+        </div>
+        <form id="create-reply-form" action="{{ url_for('create_reply_to_claim', claim_id=context.claim.claimID) }}" method="POST">
+            <label for="replyType">Reply Type:</label>
+            <select id="replyType" name="replyType" required>
+                <option value="" disabled selected>Select reply type</option>
+                <option value="1">Clarification</option>
+                <option value="2">Supporting Argument</option>
+                <option value="3">Counterargument</option>
+            </select>
+            <label for="replyText">Text:</label>
+            <input type="text" id="replyText" name="replyText" required>
+            <button type="submit">Reply</button>
+        </form>
     </div>
-    <form id="create-reply-form" action="{{ url_for('create_reply_to_claim', claim_id=context.claim.claimID) }}" method="POST">
-        <label for="replyType">Reply Type:</label>
-        <select id="replyType" name="replyType" required>
-            <option value="" disabled selected>Select reply type</option>
-            <option value="1">Clarification</option>
-            <option value="2">Supporting Argument</option>
-            <option value="3">Counterargument</option>
-        </select>
-        <label for="replyText">Text:</label>
-        <input type="text" id="replyText" name="replyText" required>
-        <button type="submit">Reply</button>
-    </form>
 </div>
-
 <div id="form-container-reply-to-reply" style="display: none;">
+    <div class="closing-mark">
+        <img id="close-reply-to-reply" src="{{ url_for('static', filename='images/close.png') }}" alt="close icon">
+    </div>
     <div class="form-header">
         <h4>Add a reply</h4>
     </div>
@@ -95,17 +101,14 @@
         <button id="reply-to-reply" type="submit">Reply</button>
     </form>
 </div>
-
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const formContainerReply = document.getElementById("form-container-reply");
         const createReplyForm = document.getElementById("create-reply-form");
-        const loginOverlay = document.getElementById('login-overlay');
+        const loginOverlay = document.getElementById('overlay');
         const plusSign = document.getElementById("plus-sign");
         const formContainerReplyToReply = document.getElementById("form-container-reply-to-reply");
  
-    
-        // Handle the plus sign click to toggle reply form visibility based on login status
         plusSign.addEventListener("click", function() {
             const isLoggedIn = document.getElementById("login-status").getAttribute("data-logged-in") === "true";
             if (isLoggedIn) {
@@ -117,19 +120,28 @@
             }
         });
     
-        // Close the reply form if clicking outside the form (but not on the plus sign)
-        document.addEventListener("click", function(event) {
-            if (!formContainerReply.contains(event.target) && !event.target.closest('.plus-sign')) {
-                formContainerReply.style.display = "none";
-            }
+        document.getElementById('close-reply').addEventListener('click', function() {
+            document.getElementById('form-container-reply').style.display = 'none';
+            loginOverlay.style.display = 'none';
         });
 
-        // Close the reply form if clicking outside the form or on the closing mark (X)
-        document.addEventListener("click", function(event) {
-            if (!formContainerReplyToReply.contains(event.target) && !event.target.closest('.reply-btn') && !event.target.closest('#close')) {
-                formContainerReplyToReply.style.display = "none";
-            }
+        document.getElementById('close-reply-to-reply').addEventListener('click', function() {
+            document.getElementById('form-container-reply-to-reply').style.display = 'none';
+
         });
+
+
+        plusSign.addEventListener("click", function() {
+        const isLoggedIn = document.getElementById("login-status").getAttribute("data-logged-in") === "true";
+        if (isLoggedIn) {
+            formContainerReply.style.display = "block";
+            loginOverlay.style.display = "block";  
+        } else {
+            loginOverlay.style.display = 'none'; 
+            formContainerReply.style.display = "none";
+        }
+    });
+
 
     
         createReplyForm.addEventListener("submit", function(event) {
@@ -157,15 +169,16 @@
                             </div>
                             <div class="reply-footer">
                                 <a class="reply-btn" data-parent-id="${data.replyID}">Add a reply</a>
-                                <div class="show-replies" onclick="toggleReplies()">Replies 0</div>
                             </div>
                         </div>
                     </div>
                 `;
-                repliesContainer.insertAdjacentHTML('afterbegin', newReplyHTML);
+                repliesContainer.insertAdjacentHTML('beforeend', newReplyHTML);
 
                 createReplyForm.reset();
                 formContainerReply.style.display = "none";
+                loginOverlay.style.display = 'none'; 
+                
             } else {
                 console.error("Failed to create reply:", data.message);
             }
@@ -179,17 +192,16 @@
         if (event.target.classList.contains('reply-btn')) {
             var parentReplyId = event.target.getAttribute('data-parent-id');
             var replyForm = document.getElementById('create-reply-to-reply-form');
-            replyForm.action = `/create_reply_to_reply/${parentReplyId}`; // Update form action dynamically
-            document.getElementById('parentReplyId').value = parentReplyId; // Set the value of the parentReplyId input field
+            replyForm.action = `/create_reply_to_reply/${parentReplyId}`; 
+            document.getElementById('parentReplyId').value = parentReplyId; 
             document.getElementById('form-container-reply-to-reply').style.display = 'block';
         }
     });
     
     document.getElementById('create-reply-to-reply-form').addEventListener("submit", function(event) {
-        event.preventDefault();  // Prevent traditional form submission
+        event.preventDefault(); 
         var formData = new FormData(this);
         var parentReplyId = formData.get('parentReplyId');
-    // Ensure the correct endpoint is hit
         var actionUrl = `/create_reply_to_reply/${parentReplyId}`;
         fetch(actionUrl, {
             method: 'POST',
@@ -198,7 +210,6 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Here you would update the UI to show the new reply
                 updateUIWithNewReply(data.newReply, formData.get('parentReplyId'));
                 document.getElementById('form-container-reply-to-reply').style.display = 'none';
             } else {
@@ -210,50 +221,38 @@
         });
     });
 
-function updateUIWithNewReply(reply, parentId) {
-    // Select the parent reply element.
-    const parentReplyElement = document.querySelector(`.reply-body[data-reply-id="${parentId}"]`);
-    if (parentReplyElement) {
-        // Find or create the nested-replies container following the parent reply element.
-        let nestedRepliesContainer = parentReplyElement.nextElementSibling;
-        if (!nestedRepliesContainer || !nestedRepliesContainer.classList.contains('nested-replies')) {
-            // If no nested-replies container exists next to the parent reply, create one.
-            const newContainerHtml = '<div class="nested-replies"></div>';
-            parentReplyElement.insertAdjacentHTML('afterend', newContainerHtml);
-            nestedRepliesContainer = parentReplyElement.nextElementSibling;
-        }
-
-        // Ensure the nestedRepliesContainer is valid before inserting the new reply.
-        if (nestedRepliesContainer) {
-            const newReplyHtml = `
-                <div class="nested-container">
-                    <div class="r-header">
-                        <p class="reply-info-user">@${reply.postingUser}</p>
-                        <p class="reply-info-time">${reply.creationTime}</p>
-                        <p class="reply-type-info">${reply.replyToReplyRelType}</p>
+    function updateUIWithNewReply(reply, parentId) {
+        const parentReplyElement = document.querySelector(`.reply-body[data-reply-id="${parentId}"]`);
+        if (parentReplyElement) {
+            let nestedRepliesContainer = parentReplyElement.nextElementSibling;
+            if (!nestedRepliesContainer || !nestedRepliesContainer.classList.contains('nested-replies')) {
+                const newContainerHtml = '<div class="nested-replies"></div>';
+                parentReplyElement.insertAdjacentHTML('afterend', newContainerHtml);
+                nestedRepliesContainer = parentReplyElement.nextElementSibling;
+            }
+            if (nestedRepliesContainer) {
+                const newReplyHtml = `
+                    <div class="nested-container">
+                        <div class="r-header">
+                            <p class="reply-info-user">@${reply.postingUser}</p>
+                            <p class="reply-info-time">${reply.creationTime}</p>
+                            <p class="reply-type-info">${reply.replyToReplyRelType}</p>
+                        </div>
+                        <div class="r-body">
+                            <p class="reply-text">${reply.replyText}</p>
+                        </div>
                     </div>
-                    <div class="r-body">
-                        <p class="reply-text">${reply.replyText}</p>
-                    </div>
-                </div>
-            `;
-            // Insert the new reply at the top of the nested replies container.
-            nestedRepliesContainer.insertAdjacentHTML('afterbegin', newReplyHtml);
+                `;
+                nestedRepliesContainer.insertAdjacentHTML('afterbegin', newReplyHtml);
+            } else {
+                console.error("Failed to create or find the nested replies container.");
+            }
         } else {
-            console.error("Failed to create or find the nested replies container.");
+            console.error("Parent reply element not found in the DOM.");
         }
-    } else {
-        console.error("Parent reply element not found in the DOM.");
     }
-}
-
-
-
-
-
-        
-    });
-    </script>
+});
+</script>
     
     
 
